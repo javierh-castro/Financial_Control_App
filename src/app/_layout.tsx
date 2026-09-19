@@ -1,13 +1,11 @@
-import { ThemeProvider } from 'expo-router';
-import { Tabs } from 'expo-router/js-tabs';
+import { Stack, ThemeProvider } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { SQLiteProvider } from 'expo-sqlite';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
-import { FloatingTabBar } from '@/components/navigation/floating-tab-bar';
-import { TABS } from '@/components/navigation/tabs-config';
 import { Colors } from '@/constants/theme';
 import { DATABASE_NAME, migrateDbIfNeeded } from '@/data/db';
+import { AuthProvider, useAuth } from '@/providers/auth-provider';
 
 /** Tema de navegación: la app usa una sola paleta clara en esta etapa. */
 const navigationTheme = {
@@ -34,15 +32,36 @@ export default function RootLayout() {
       <SQLiteProvider databaseName={DATABASE_NAME} onInit={migrateDbIfNeeded}>
         <ThemeProvider value={navigationTheme}>
           <StatusBar style="dark" />
-          <Tabs
-            screenOptions={{ headerShown: false, sceneStyle: { backgroundColor: Colors.background } }}
-            tabBar={(props) => <FloatingTabBar {...props} />}>
-            {TABS.map((tab) => (
-              <Tabs.Screen key={tab.name} name={tab.name} options={{ title: tab.label }} />
-            ))}
-          </Tabs>
+          <AuthProvider>
+            <RootNavigator />
+          </AuthProvider>
         </ThemeProvider>
       </SQLiteProvider>
     </SafeAreaProvider>
+  );
+}
+
+/**
+ * Con sesión: solo el grupo (tabs). Sin sesión: solo el grupo (auth).
+ * Ambos grupos están siempre declarados; `guard` decide cuál se puede
+ * navegar, sin redirects manuales. Mientras se lee la sesión
+ * persistida local no se muestra nada, para no parpadear entre grupos.
+ */
+function RootNavigator() {
+  const { session, loading } = useAuth();
+
+  if (loading) {
+    return null;
+  }
+
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Protected guard={!!session}>
+        <Stack.Screen name="(tabs)" />
+      </Stack.Protected>
+      <Stack.Protected guard={!session}>
+        <Stack.Screen name="(auth)" />
+      </Stack.Protected>
+    </Stack>
   );
 }
