@@ -5,6 +5,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { Colors } from '@/constants/theme';
 import { DATABASE_NAME, migrateDbIfNeeded } from '@/data/db';
+import { useSyncScheduler } from '@/hooks/use-sync-scheduler';
 import { AuthProvider, useAuth } from '@/providers/auth-provider';
 
 /** Tema de navegación: la app usa una sola paleta clara en esta etapa. */
@@ -49,6 +50,9 @@ export default function RootLayout() {
  */
 function RootNavigator() {
   const { session, loading } = useAuth();
+  // Dispara la sincronización con Supabase (login, foreground, reconexión);
+  // sin lógica de red en las pantallas, ver src/services/sync-service.ts.
+  useSyncScheduler();
 
   if (loading) {
     return null;
