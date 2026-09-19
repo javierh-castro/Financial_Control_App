@@ -74,6 +74,17 @@ create trigger trg_transactions_bump
   before update on transactions
   for each row execute function bump_version();
 
+-- ---------- Grants explícitos ----------
+-- "Automatically expose new tables" está desactivado: no hay
+-- privilegios por defecto sobre tablas nuevas, así que se otorgan acá
+-- explícitamente solo los mínimos necesarios. anon no recibe ningún
+-- privilegio sobre estas tablas; authenticated no recibe delete.
+revoke all on profiles, categories, transactions from anon, authenticated;
+
+grant select on profiles to authenticated;
+grant select, insert, update on categories to authenticated;
+grant select, insert, update on transactions to authenticated;
+
 -- ---------- RLS ----------
 alter table profiles enable row level security;
 alter table categories enable row level security;
@@ -87,20 +98,20 @@ create policy "update own profile" on profiles
 
 -- Bloqueo de "role" a nivel de columna (no alcanza con RLS de fila):
 -- el cliente nunca puede promoverse a admin, ni aunque intente un
--- UPDATE directo.
-revoke update, insert on profiles from authenticated;
+-- UPDATE directo. El grant de tabla en profiles es select-only; acá
+-- se habilita update solo para la columna full_name.
 grant update (full_name) on profiles to authenticated;
 
--- categories: select/insert/update separados, sin delete. Borrar un
--- movimiento u categoría es actualizar deleted_at (para que
--- sincronice como cualquier otro cambio), nunca un DELETE real.
+-- categories: select/insert/update separados, sin delete (no
+-- concedido arriba). Borrar un movimiento u categoría es actualizar
+-- deleted_at (para que sincronice como cualquier otro cambio), nunca
+-- un DELETE real.
 create policy "select own categories" on categories
   for select using (auth.uid() = user_id);
 create policy "insert own categories" on categories
   for insert with check (auth.uid() = user_id);
 create policy "update own categories" on categories
   for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
-revoke delete on categories from authenticated;
 
 create policy "select own transactions" on transactions
   for select using (auth.uid() = user_id);
@@ -108,7 +119,6 @@ create policy "insert own transactions" on transactions
   for insert with check (auth.uid() = user_id);
 create policy "update own transactions" on transactions
   for update using (auth.uid() = user_id) with check (auth.uid() = user_id);
-revoke delete on transactions from authenticated;
 
 -- ---------- signup: perfil + categorías por default ----------
 create or replace function handle_new_user()
