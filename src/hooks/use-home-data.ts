@@ -2,6 +2,7 @@ import { useSQLiteContext } from 'expo-sqlite';
 import { useCallback, useEffect, useState } from 'react';
 
 import { getMonthlySummary, getRecentTransactions } from '@/data/transactions';
+import { useAuth } from '@/providers/auth-provider';
 import type { MonthlySummary, Transaction } from '@/types/finance';
 
 const RECENT_TRANSACTIONS_LIMIT = 5;
@@ -23,23 +24,32 @@ type HomeData = {
 
 const emptySummary: MonthlySummary = { month: currentMonthIso(), income: 0, expenses: 0 };
 
-/** Datos del Home leídos de SQLite: resumen del mes y últimos movimientos. */
+/**
+ * Datos del Home leídos de SQLite: resumen del mes y últimos movimientos,
+ * siempre filtrados por el usuario autenticado (`session.user.id`).
+ */
 export function useHomeData(): HomeData {
   const db = useSQLiteContext();
+  const { session } = useAuth();
+  const userId = session?.user.id;
   const [summary, setSummary] = useState<MonthlySummary>(emptySummary);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
 
   const reload = useCallback(async () => {
+    if (!userId) {
+      setLoading(false);
+      return;
+    }
     const month = currentMonthIso();
     const [summaryResult, recent] = await Promise.all([
-      getMonthlySummary(db, month),
-      getRecentTransactions(db, RECENT_TRANSACTIONS_LIMIT),
+      getMonthlySummary(db, userId, month),
+      getRecentTransactions(db, userId, RECENT_TRANSACTIONS_LIMIT),
     ]);
     setSummary(summaryResult);
     setTransactions(recent);
     setLoading(false);
-  }, [db]);
+  }, [db, userId]);
 
   useEffect(() => {
     // Patrón de fetch-en-efecto recomendado por React (setState llega

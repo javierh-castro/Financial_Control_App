@@ -1,62 +1,86 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import { seedTransactions } from '@/data/sample-data';
-
 /** Nombre del archivo de base de datos en el dispositivo. */
 export const DATABASE_NAME = 'gastos.db';
 
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
 
 /**
- * Crea el esquema y siembra datos de ejemplo la primera vez que corre la
- * app. Usa `PRAGMA user_version` para no repetir migraciones ya aplicadas,
- * siguiendo el patrón recomendado por Expo SQLite.
+ * Crea/actualiza el esquema local vía `PRAGMA user_version`, siguiendo el
+ * patrón recomendado por Expo SQLite. Toda la migración corre dentro de
+ * una única transacción exclusiva: si el proceso se interrumpe a mitad de
+ * camino, `user_version` no llega a actualizarse, nada de lo hecho queda
+ * a medio commitear, y el próximo arranque reintenta la migración
+ * completa desde cero (transaccional e idempotente).
+ *
+ * v1 → v2 (Entrega 2, multiusuario + preparación de sync offline-first):
+ * la tabla `transactions` de la Entrega 1 no tenía `user_id` ni
+ * `category_id`, y traía datos de ejemplo sembrados (t-1/t-2/t-3) que no
+ * encajan en el esquema nuevo. No se borran a ciegas: la tabla vieja se
+ * archiva completa como `legacy_transactions_v1` (queda en el archivo de
+ * base de datos, fuera de cualquier consulta y de cualquier sync futuro).
+ * Una instalación nueva (v0) no pasa por ese archivado: arranca
+ * directamente con el esquema v2, sin sembrado.
  */
 export async function migrateDbIfNeeded(db: SQLiteDatabase): Promise<void> {
-  const result = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
-  let currentDbVersion = result?.user_version ?? 0;
+  // No se puede cambiar journal_mode dentro de una transacción explícita.
+  await db.execAsync("PRAGMA journal_mode = 'wal';");
 
-  if (currentDbVersion >= DATABASE_VERSION) {
+  const result = await db.getFirstAsync<{ user_version: number }>('PRAGMA user_version');
+  const currentVersion = result?.user_version ?? 0;
+
+  if (currentVersion >= DATABASE_VERSION) {
     return;
   }
 
-  if (currentDbVersion === 0) {
-    await db.execAsync(`
-      PRAGMA journal_mode = 'wal';
-      CREATE TABLE transactions (
-        id TEXT PRIMARY KEY NOT NULL,
-        title TEXT NOT NULL,
-        category TEXT NOT NULL,
-        amount REAL NOT NULL,
-        kind TEXT NOT NULL CHECK (kind IN ('income', 'expense')),
-        date TEXT NOT NULL,
-        icon TEXT NOT NULL
-      );
-      CREATE INDEX idx_transactions_date ON transactions (date);
-    `);
-
-    const insert = await db.prepareAsync(
-      `INSERT INTO transactions (id, title, category, amount, kind, date, icon)
-       VALUES ($id, $title, $category, $amount, $kind, $date, $icon)`
-    );
-    try {
-      for (const transaction of seedTransactions) {
-        await insert.executeAsync({
-          $id: transaction.id,
-          $title: transaction.title,
-          $category: transaction.category,
-          $amount: transaction.amount,
-          $kind: transaction.kind,
-          $date: transaction.date,
-          $icon: transaction.icon,
-        });
-      }
-    } finally {
-      await insert.finalizeAsync();
+  await db.withExclusiveTransactionAsync(async (txn) => {
+    if (currentVersion === 1) {
+      await txn.execAsync('ALTER TABLE transactions RENAME TO legacy_transactions_v1;');
     }
 
-    currentDbVersion = 1;
-  }
+    await txn.execAsync(`
+      CREATE TABLE IF NOT EXISTS categories (
+        id TEXT PRIMARY KEY NOT NULL,
+        user_id TEXT NOT NULL,
+        name TEXT NOT NULL,
+        icon TEXT NOT NULL,
+        kind TEXT NOT NULL CHECK (kind IN ('income', 'expense')),
+        version INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+        updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+        deleted_at TEXT,
+        sync_status TEXT NOT NULL DEFAULT 'pending' CHECK (sync_status IN ('pending', 'synced', 'failed')),
+        last_sync_error TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_categories_user ON categories (user_id);
+      CREATE INDEX IF NOT EXISTS idx_categories_sync_status ON categories (sync_status);
 
-  await db.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
+      CREATE TABLE IF NOT EXISTS transactions (
+        id TEXT PRIMARY KEY NOT NULL,
+        user_id TEXT NOT NULL,
+        category_id TEXT REFERENCES categories (id),
+        title TEXT NOT NULL,
+        amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
+        kind TEXT NOT NULL CHECK (kind IN ('income', 'expense')),
+        date TEXT NOT NULL,
+        version INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+        updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+        deleted_at TEXT,
+        sync_status TEXT NOT NULL DEFAULT 'pending' CHECK (sync_status IN ('pending', 'synced', 'failed')),
+        last_sync_error TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_transactions_user ON transactions (user_id);
+      CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions (date);
+      CREATE INDEX IF NOT EXISTS idx_transactions_sync_status ON transactions (sync_status);
+
+      CREATE TABLE IF NOT EXISTS sync_metadata (
+        user_id TEXT PRIMARY KEY NOT NULL,
+        last_synced_at TEXT,
+        last_cursor TEXT
+      );
+    `);
+
+    await txn.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);
+  });
 }
