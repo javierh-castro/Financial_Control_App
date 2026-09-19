@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, View } from 'react-native';
 
@@ -29,6 +30,7 @@ function validate(
 }
 
 export default function RegisterScreen() {
+  const router = useRouter();
   const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -36,7 +38,6 @@ export default function RegisterScreen() {
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [submitted, setSubmitted] = useState(false);
 
   async function handleSubmit() {
     const validationError = validate(fullName, email, password, confirmPassword, acceptedTerms);
@@ -46,8 +47,9 @@ export default function RegisterScreen() {
     }
     setError(null);
     setSubmitting(true);
-    const { error: signUpError } = await supabase.auth.signUp({
-      email: email.trim(),
+    const trimmedEmail = email.trim();
+    const { data, error: signUpError } = await supabase.auth.signUp({
+      email: trimmedEmail,
       password,
       options: { data: { full_name: fullName.trim() } },
     });
@@ -56,20 +58,13 @@ export default function RegisterScreen() {
       setError(signUpError.message);
       return;
     }
-    setSubmitted(true);
-  }
-
-  if (submitted) {
-    return (
-      <AuthScreen>
-        <AuthHeader
-          icon="mail-outline"
-          title="Revisá tu correo"
-          subtitle={`Te mandamos un link de confirmación a ${email.trim()}.`}
-        />
-        <AuthFooterLink prompt="¿Ya confirmaste?" actionLabel="Iniciar sesión" href="/login" />
-      </AuthScreen>
-    );
+    if (data.session) {
+      // Email Confirmations desactivado en el proyecto: signUp ya
+      // abrió sesión. No hay código que verificar; Stack.Protected en
+      // _layout.tsx detecta la sesión nueva y navega solo a (tabs).
+      return;
+    }
+    router.push({ pathname: '/verify-email', params: { email: trimmedEmail } });
   }
 
   return (
