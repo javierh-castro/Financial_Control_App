@@ -1,18 +1,13 @@
 /**
- * Datos de ejemplo de la primera etapa. Se reemplazan por el almacenamiento
- * real (y más adelante la sincronización) sin tocar los componentes: todos
- * reciben lo que muestran por props.
+ * Datos de ejemplo. Se usan solo para sembrar la base SQLite la primera vez
+ * que corre la app (ver `migrateDbIfNeeded` en `src/data/db.ts`), así una
+ * instalación nueva no arranca vacía. Los datos reales que ve la app
+ * siempre salen de la base, no de este archivo.
  */
 
-import type { MonthlySummary, Transaction } from '@/types/finance';
+import type { Transaction } from '@/types/finance';
 
-export const currentSummary: MonthlySummary = {
-  month: '2026-09-01',
-  income: 320000,
-  expenses: 215400,
-};
-
-export const recentTransactions: Transaction[] = [
+export const seedTransactions: Transaction[] = [
   {
     id: 't-1',
     title: 'Supermercado',
@@ -41,8 +36,3 @@ export const recentTransactions: Transaction[] = [
     icon: 'bus-outline',
   },
 ];
-
-/** Saldo disponible del período. */
-export function availableBalance(summary: MonthlySummary): number {
-  return summary.income - summary.expenses;
-}

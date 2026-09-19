@@ -8,17 +8,20 @@ import { TransactionList } from '@/components/home/transaction-list';
 import { Screen } from '@/components/ui/screen';
 import { SectionHeader } from '@/components/ui/section-header';
 import { Spacing } from '@/constants/theme';
-import { availableBalance, currentSummary, recentTransactions } from '@/data/sample-data';
+import { availableBalance } from '@/data/transactions';
+import { useHomeData } from '@/hooks/use-home-data';
 
 export default function HomeScreen() {
+  const { summary, transactions, loading } = useHomeData();
+
   return (
     <Screen>
-      <GreetingHeader month={currentSummary.month} synced />
+      <GreetingHeader month={summary.month} synced />
 
       <BalanceCard
-        available={availableBalance(currentSummary)}
-        income={currentSummary.income}
-        expenses={currentSummary.expenses}
+        available={availableBalance(summary)}
+        income={summary.income}
+        expenses={summary.expenses}
       />
 
       <QuickActions />
@@ -29,7 +32,10 @@ export default function HomeScreen() {
           actionLabel="Ver todos"
           onPressAction={() => router.navigate('/movimientos')}
         />
-        <TransactionList transactions={recentTransactions} />
+        <TransactionList
+          transactions={transactions}
+          emptyLabel={loading ? 'Cargando…' : undefined}
+        />
       </View>
     </Screen>
   );
