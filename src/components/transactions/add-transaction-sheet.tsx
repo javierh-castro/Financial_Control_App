@@ -1,4 +1,3 @@
-import { BottomSheet } from '@expo/ui';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import * as Crypto from 'expo-crypto';
 import { useSQLiteContext } from 'expo-sqlite';
@@ -6,6 +5,7 @@ import { useEffect, useState } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { FormMessage } from '@/components/auth/form-message';
+import { BottomSheet } from '@/components/ui/bottom-sheet';
 import { DateField } from '@/components/ui/date-field';
 import { IconCircle } from '@/components/ui/icon-circle';
 import { PrimaryButton } from '@/components/ui/primary-button';
@@ -249,7 +249,10 @@ export function AddTransactionSheet({ kind, isPresented, onDismiss, onSaved }: P
           }))}
         />
       ) : (
-        <View style={styles.content}>
+        <ScrollView
+          contentContainerStyle={styles.content}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}>
           <Text style={styles.title}>{labels.screenTitle}</Text>
 
           <View style={styles.fieldGroup}>
@@ -326,7 +329,7 @@ export function AddTransactionSheet({ kind, isPresented, onDismiss, onSaved }: P
               <Text style={styles.scanSubtitle}>(Próximamente)</Text>
             </View>
           </View>
-        </View>
+        </ScrollView>
       )}
     </BottomSheet>
   );
