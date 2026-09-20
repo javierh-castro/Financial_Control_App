@@ -29,6 +29,7 @@ type LocalTransactionRow = {
   amount_cents: number;
   kind: string;
   date: string;
+  payment_method: string;
   deleted_at: string | null;
 };
 
@@ -52,6 +53,7 @@ type RemoteTransactionRow = {
   amount_cents: number;
   kind: string;
   date: string;
+  payment_method: string;
   version: number;
   created_at: string;
   updated_at: string;
@@ -135,7 +137,7 @@ async function pushCategories(db: SQLiteDatabase, userId: string): Promise<boole
 /** Empuja las transacciones pendientes/fallidas. Devuelve false si alguna falló. */
 async function pushTransactions(db: SQLiteDatabase, userId: string): Promise<boolean> {
   const pending = await db.getAllAsync<LocalTransactionRow>(
-    `SELECT id, category_id, title, amount_cents, kind, date, deleted_at
+    `SELECT id, category_id, title, amount_cents, kind, date, payment_method, deleted_at
      FROM transactions
      WHERE user_id = ? AND sync_status IN ('pending', 'failed')`,
     userId
@@ -152,6 +154,7 @@ async function pushTransactions(db: SQLiteDatabase, userId: string): Promise<boo
         amount_cents: transaction.amount_cents,
         kind: transaction.kind,
         date: transaction.date,
+        payment_method: transaction.payment_method,
         deleted_at: transaction.deleted_at,
       },
       { onConflict: 'id' }
@@ -225,8 +228,8 @@ async function pullAndApply(db: SQLiteDatabase, userId: string): Promise<void> {
     for (const transaction of transactions) {
       await txn.runAsync(
         `INSERT INTO transactions
-           (id, user_id, category_id, title, amount_cents, kind, date, version, created_at, updated_at, deleted_at, sync_status, last_sync_error)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'synced', NULL)
+           (id, user_id, category_id, title, amount_cents, kind, date, payment_method, version, created_at, updated_at, deleted_at, sync_status, last_sync_error)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'synced', NULL)
          ON CONFLICT(id) DO UPDATE SET
            user_id = excluded.user_id,
            category_id = excluded.category_id,
@@ -234,6 +237,7 @@ async function pullAndApply(db: SQLiteDatabase, userId: string): Promise<void> {
            amount_cents = excluded.amount_cents,
            kind = excluded.kind,
            date = excluded.date,
+           payment_method = excluded.payment_method,
            version = excluded.version,
            created_at = excluded.created_at,
            updated_at = excluded.updated_at,
@@ -247,6 +251,7 @@ async function pullAndApply(db: SQLiteDatabase, userId: string): Promise<void> {
         transaction.amount_cents,
         transaction.kind,
         transaction.date,
+        transaction.payment_method,
         transaction.version,
         transaction.created_at,
         transaction.updated_at,

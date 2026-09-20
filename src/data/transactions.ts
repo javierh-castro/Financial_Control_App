@@ -1,6 +1,6 @@
 import type { SQLiteDatabase } from 'expo-sqlite';
 
-import type { MonthlySummary, Transaction, TransactionKind } from '@/types/finance';
+import type { MonthlySummary, PaymentMethod, Transaction, TransactionKind } from '@/types/finance';
 
 /** Datos para crear un movimiento nuevo; `id` lo genera quien llama (UUID). */
 export type NewTransaction = {
@@ -12,6 +12,7 @@ export type NewTransaction = {
   kind: TransactionKind;
   /** Fecha en formato ISO (YYYY-MM-DD). */
   date: string;
+  paymentMethod: PaymentMethod;
 };
 
 /**
@@ -79,15 +80,16 @@ export async function addTransaction(
   transaction: NewTransaction
 ): Promise<void> {
   await db.runAsync(
-    `INSERT INTO transactions (id, user_id, category_id, title, amount_cents, kind, date)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    `INSERT INTO transactions (id, user_id, category_id, title, amount_cents, kind, date, payment_method)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
     transaction.id,
     userId,
     transaction.categoryId,
     transaction.title,
     Math.round(transaction.amount * 100),
     transaction.kind,
-    transaction.date
+    transaction.date,
+    transaction.paymentMethod
   );
 }
 

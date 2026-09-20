@@ -4,6 +4,8 @@ export type IconName = keyof typeof Ionicons.glyphMap;
 
 export type TransactionKind = 'income' | 'expense';
 
+export type PaymentMethod = 'cash' | 'card' | 'transfer';
+
 export type Transaction = {
   id: string;
   /** Descripción que ve el usuario, por ejemplo "Supermercado". */

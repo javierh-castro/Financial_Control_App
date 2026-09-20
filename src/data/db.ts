@@ -3,7 +3,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 /** Nombre del archivo de base de datos en el dispositivo. */
 export const DATABASE_NAME = 'gastos.db';
 
-const DATABASE_VERSION = 2;
+const DATABASE_VERSION = 3;
 
 /**
  * Crea/actualiza el esquema local vía `PRAGMA user_version`, siguiendo el
@@ -21,6 +21,12 @@ const DATABASE_VERSION = 2;
  * base de datos, fuera de cualquier consulta y de cualquier sync futuro).
  * Una instalación nueva (v0) no pasa por ese archivado: arranca
  * directamente con el esquema v2, sin sembrado.
+ *
+ * v2 → v3 (Entrega 3B, método de pago): agrega `payment_method` a
+ * `transactions` (espejo de `supabase/migrations/0002_add_payment_method.sql`).
+ * Solo hace falta el `ALTER TABLE` para instalaciones que ya tenían la
+ * tabla en v2; una instalación v0/v1 llega directo al `CREATE TABLE` de
+ * abajo, que ya incluye la columna.
  */
 export async function migrateDbIfNeeded(db: SQLiteDatabase): Promise<void> {
   // No se puede cambiar journal_mode dentro de una transacción explícita.
@@ -36,6 +42,13 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase): Promise<void> {
   await db.withExclusiveTransactionAsync(async (txn) => {
     if (currentVersion === 1) {
       await txn.execAsync('ALTER TABLE transactions RENAME TO legacy_transactions_v1;');
+    }
+
+    if (currentVersion === 2) {
+      await txn.execAsync(`
+        ALTER TABLE transactions ADD COLUMN payment_method TEXT NOT NULL DEFAULT 'cash'
+          CHECK (payment_method IN ('cash', 'card', 'transfer'));
+      `);
     }
 
     await txn.execAsync(`
@@ -63,6 +76,7 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase): Promise<void> {
         amount_cents INTEGER NOT NULL CHECK (amount_cents > 0),
         kind TEXT NOT NULL CHECK (kind IN ('income', 'expense')),
         date TEXT NOT NULL,
+        payment_method TEXT NOT NULL DEFAULT 'cash' CHECK (payment_method IN ('cash', 'card', 'transfer')),
         version INTEGER NOT NULL DEFAULT 1,
         created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
         updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
