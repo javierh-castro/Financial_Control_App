@@ -1,7 +1,8 @@
 import { StyleSheet, Text, View } from 'react-native';
 
 import { TransactionItem } from '@/components/home/transaction-item';
-import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
+import { FontSize, Radius, Spacing } from '@/constants/theme';
+import { useAppTheme } from '@/providers/theme-provider';
 import type { Transaction } from '@/types/finance';
 
 type Props = {
@@ -19,10 +20,12 @@ export function TransactionList({
   onPressTransaction,
   emptyLabel = 'Todavía no cargaste movimientos.',
 }: Props) {
+  const { colors } = useAppTheme();
+
   if (transactions.length === 0) {
     return (
-      <View style={styles.empty}>
-        <Text style={styles.emptyLabel}>{emptyLabel}</Text>
+      <View style={[styles.empty, { backgroundColor: colors.surface }]}>
+        <Text style={[styles.emptyLabel, { color: colors.textSecondary }]}>{emptyLabel}</Text>
       </View>
     );
   }
@@ -47,12 +50,10 @@ const styles = StyleSheet.create({
   empty: {
     padding: Spacing.five,
     borderRadius: Radius.md,
-    backgroundColor: Colors.surface,
     alignItems: 'center',
   },
   emptyLabel: {
     fontSize: FontSize.small,
-    color: Colors.textSecondary,
     textAlign: 'center',
   },
 });

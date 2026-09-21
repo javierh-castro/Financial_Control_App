@@ -3,7 +3,8 @@ import type { ReactNode } from 'react';
 import { KeyboardAvoidingView, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CardShadow, Colors, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
+import { CardShadow, MaxContentWidth, Radius, Spacing } from '@/constants/theme';
+import { useAppTheme } from '@/providers/theme-provider';
 
 /**
  * Fondo degradado + tarjeta blanca centrada: la base común de
@@ -12,9 +13,10 @@ import { CardShadow, Colors, MaxContentWidth, Radius, Spacing } from '@/constant
  */
 export function AuthScreen({ children }: { children: ReactNode }) {
   const insets = useSafeAreaInsets();
+  const { colors } = useAppTheme();
 
   return (
-    <LinearGradient colors={[Colors.surface, Colors.background]} style={styles.root}>
+    <LinearGradient colors={[colors.surface, colors.background]} style={styles.root}>
       <KeyboardAvoidingView
         style={styles.flex}
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
@@ -26,7 +28,7 @@ export function AuthScreen({ children }: { children: ReactNode }) {
           ]}
           keyboardShouldPersistTaps="handled"
           showsVerticalScrollIndicator={false}>
-          <View style={styles.card}>{children}</View>
+          <View style={[styles.card, { backgroundColor: colors.surface }]}>{children}</View>
         </ScrollView>
       </KeyboardAvoidingView>
     </LinearGradient>
@@ -46,7 +48,6 @@ const styles = StyleSheet.create({
     maxWidth: MaxContentWidth,
     alignSelf: 'center',
     gap: Spacing.five,
-    backgroundColor: Colors.surface,
     borderRadius: Radius.lg,
     padding: Spacing.six,
     ...CardShadow,

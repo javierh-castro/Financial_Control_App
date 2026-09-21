@@ -8,8 +8,9 @@ import { AuthScreen } from '@/components/auth/auth-screen';
 import { FormMessage } from '@/components/auth/form-message';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { TextField } from '@/components/ui/text-field';
-import { Colors, FontSize, Spacing } from '@/constants/theme';
+import { FontSize, Spacing } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
+import { useAppTheme } from '@/providers/theme-provider';
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const CODE_LENGTH = 6;
@@ -33,6 +34,7 @@ function describeError(error: AuthError, fallback: string): string {
 }
 
 export default function VerifyEmailScreen() {
+  const { colors } = useAppTheme();
   const router = useRouter();
   const { email: emailParam } = useLocalSearchParams<{ email?: string | string[] }>();
   const email = normalizeEmailParam(emailParam);
@@ -133,13 +135,17 @@ export default function VerifyEmailScreen() {
       />
 
       <View style={styles.resendRow}>
-        <Text style={styles.resendPrompt}>¿No te llegó? </Text>
+        <Text style={[styles.resendPrompt, { color: colors.textSecondary }]}>¿No te llegó? </Text>
         <Pressable
           accessibilityRole="button"
           accessibilityState={{ disabled: resendDisabled }}
           onPress={resendDisabled ? undefined : handleResend}
           hitSlop={Spacing.two}>
-          <Text style={[styles.resendLink, resendDisabled && styles.resendLinkDisabled]}>
+          <Text
+            style={[
+              styles.resendLink,
+              { color: resendDisabled ? colors.textSecondary : colors.green },
+            ]}>
             {secondsLeft > 0 ? `Reenviar código (0:${String(secondsLeft).padStart(2, '0')})` : 'Reenviar código'}
           </Text>
         </Pressable>
@@ -156,14 +162,9 @@ const styles = StyleSheet.create({
   },
   resendPrompt: {
     fontSize: FontSize.small,
-    color: Colors.textSecondary,
   },
   resendLink: {
     fontSize: FontSize.small,
-    color: Colors.green,
     fontWeight: '700',
-  },
-  resendLinkDisabled: {
-    color: Colors.textSecondary,
   },
 });

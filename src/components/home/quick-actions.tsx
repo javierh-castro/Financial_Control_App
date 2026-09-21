@@ -1,7 +1,9 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
+import { CardShadow, FontSize, Radius, Spacing } from '@/constants/theme';
+import { useAppTheme } from '@/providers/theme-provider';
+import type { IconName } from '@/types/finance';
 
 type Props = {
   onAddExpense?: () => void;
@@ -10,18 +12,24 @@ type Props = {
 
 /** Los dos accesos rápidos para cargar un movimiento. */
 export function QuickActions({ onAddExpense, onAddIncome }: Props) {
+  const { colors } = useAppTheme();
+
   return (
     <View style={styles.row}>
       <QuickAction
         label="Gasto"
-        tint={Colors.red}
-        background={Colors.redSoft}
+        icon="remove"
+        tint={colors.red}
+        background={colors.redSoft}
+        textColor={colors.text}
         onPress={onAddExpense}
       />
       <QuickAction
         label="Ingreso"
-        tint={Colors.green}
-        background={Colors.greenSoft}
+        icon="add"
+        tint={colors.green}
+        background={colors.greenSoft}
+        textColor={colors.text}
         onPress={onAddIncome}
       />
     </View>
@@ -30,13 +38,17 @@ export function QuickActions({ onAddExpense, onAddIncome }: Props) {
 
 function QuickAction({
   label,
+  icon,
   tint,
   background,
+  textColor,
   onPress,
 }: {
   label: string;
+  icon: IconName;
   tint: string;
   background: string;
+  textColor: string;
   onPress?: () => void;
 }) {
   return (
@@ -46,13 +58,11 @@ function QuickAction({
       onPress={onPress}
       style={({ pressed }) => [
         styles.action,
-        { backgroundColor: background },
+        { backgroundColor: background, borderColor: tint },
         pressed && styles.pressed,
       ]}>
-      <View style={styles.icon}>
-        <Ionicons name="add" size={22} color={tint} />
-      </View>
-      <Text style={styles.label}>{label}</Text>
+      <Ionicons name={icon} size={22} color={tint} />
+      <Text style={[styles.label, { color: textColor }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -71,19 +81,12 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.four,
     paddingHorizontal: Spacing.three,
     borderRadius: Radius.md,
-  },
-  icon: {
-    width: 34,
-    height: 34,
-    borderRadius: Radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.surface,
+    borderWidth: 1.5,
+    ...CardShadow,
   },
   label: {
     fontSize: FontSize.subtitle,
     fontWeight: '800',
-    color: Colors.text,
   },
   pressed: {
     opacity: 0.7,

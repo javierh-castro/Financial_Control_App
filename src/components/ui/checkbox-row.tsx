@@ -1,7 +1,8 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Colors, FontSize, Spacing } from '@/constants/theme';
+import { FontSize, Spacing } from '@/constants/theme';
+import { useAppTheme } from '@/providers/theme-provider';
 
 type Props = {
   checked: boolean;
@@ -11,16 +12,23 @@ type Props = {
 
 /** Checkbox con etiqueta; hoy solo lo usa "aceptar términos" del registro. */
 export function CheckboxRow({ checked, onToggle, label }: Props) {
+  const { colors } = useAppTheme();
+
   return (
     <Pressable
       accessibilityRole="checkbox"
       accessibilityState={{ checked }}
       onPress={onToggle}
       style={styles.row}>
-      <View style={[styles.box, checked && styles.boxChecked]}>
-        {checked && <Ionicons name="checkmark" size={16} color={Colors.textOnGreen} />}
+      <View
+        style={[
+          styles.box,
+          { borderColor: colors.textSecondary },
+          checked && { backgroundColor: colors.green, borderColor: colors.green },
+        ]}>
+        {checked && <Ionicons name="checkmark" size={16} color={colors.textOnGreen} />}
       </View>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={[styles.label, { color: colors.text }]}>{label}</Text>
     </Pressable>
   );
 }
@@ -36,17 +44,11 @@ const styles = StyleSheet.create({
     height: 24,
     borderRadius: 6,
     borderWidth: 1.5,
-    borderColor: Colors.textSecondary,
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  boxChecked: {
-    backgroundColor: Colors.green,
-    borderColor: Colors.green,
   },
   label: {
     flex: 1,
     fontSize: FontSize.small,
-    color: Colors.text,
   },
 });

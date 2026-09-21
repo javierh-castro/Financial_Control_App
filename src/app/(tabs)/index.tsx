@@ -12,15 +12,18 @@ import { SectionHeader } from '@/components/ui/section-header';
 import { Spacing } from '@/constants/theme';
 import { availableBalance } from '@/data/transactions';
 import { useHomeData } from '@/hooks/use-home-data';
+import { useAuth } from '@/providers/auth-provider';
 import type { TransactionKind } from '@/types/finance';
+import { firstName } from '@/utils/format';
 
 export default function HomeScreen() {
   const { summary, transactions, loading, reload } = useHomeData();
+  const { session } = useAuth();
   const [sheetKind, setSheetKind] = useState<TransactionKind | null>(null);
 
   return (
     <Screen>
-      <GreetingHeader month={summary.month} synced />
+      <GreetingHeader name={firstName(session?.user.user_metadata.full_name)} month={summary.month} synced />
 
       <BalanceCard
         available={availableBalance(summary)}

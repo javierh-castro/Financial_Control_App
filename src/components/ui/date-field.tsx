@@ -3,7 +3,8 @@ import Ionicons from '@expo/vector-icons/Ionicons';
 import { useState } from 'react';
 import { Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
+import { FontSize, Radius, Spacing } from '@/constants/theme';
+import { useAppTheme } from '@/providers/theme-provider';
 
 type Props = {
   value: Date;
@@ -23,6 +24,7 @@ function formatDate(date: Date): string {
  * se desmonta al confirmar/cancelar.
  */
 export function DateField({ value, onChange, accentColor }: Props) {
+  const { colors, isDark } = useAppTheme();
   const [androidPickerOpen, setAndroidPickerOpen] = useState(false);
 
   if (Platform.OS === 'android') {
@@ -31,10 +33,14 @@ export function DateField({ value, onChange, accentColor }: Props) {
         <Pressable
           accessibilityRole="button"
           onPress={() => setAndroidPickerOpen(true)}
-          style={({ pressed }) => [styles.field, pressed && styles.pressed]}>
-          <Ionicons name="calendar-outline" size={20} color={Colors.textSecondary} />
-          <Text style={styles.value}>{formatDate(value)}</Text>
-          <Ionicons name="chevron-down" size={18} color={Colors.textSecondary} />
+          style={({ pressed }) => [
+            styles.field,
+            { backgroundColor: colors.background },
+            pressed && styles.pressed,
+          ]}>
+          <Ionicons name="calendar-outline" size={20} color={colors.textSecondary} />
+          <Text style={[styles.value, { color: colors.text }]}>{formatDate(value)}</Text>
+          <Ionicons name="chevron-down" size={18} color={colors.textSecondary} />
         </Pressable>
         {androidPickerOpen && (
           <DateTimePicker
@@ -54,13 +60,14 @@ export function DateField({ value, onChange, accentColor }: Props) {
   }
 
   return (
-    <View style={styles.field}>
-      <Ionicons name="calendar-outline" size={20} color={Colors.textSecondary} />
+    <View style={[styles.field, { backgroundColor: colors.background }]}>
+      <Ionicons name="calendar-outline" size={20} color={colors.textSecondary} />
       <DateTimePicker
         value={value}
         mode="date"
         display="compact"
         accentColor={accentColor}
+        themeVariant={isDark ? 'dark' : 'light'}
         onValueChange={(_event, date) => onChange(date)}
         style={styles.picker}
       />
@@ -76,7 +83,6 @@ const styles = StyleSheet.create({
     height: 56,
     paddingHorizontal: Spacing.four,
     borderRadius: Radius.lg,
-    backgroundColor: Colors.background,
   },
   picker: {
     flex: 1,
@@ -85,7 +91,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: FontSize.body,
     fontWeight: '600',
-    color: Colors.text,
   },
   pressed: {
     opacity: 0.7,

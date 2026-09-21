@@ -2,7 +2,8 @@ import type { ReactNode } from 'react';
 import { ScrollView, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Colors, MaxContentWidth, Spacing, TabBarHeight } from '@/constants/theme';
+import { MaxContentWidth, Spacing, TabBarHeight } from '@/constants/theme';
+import { useAppTheme } from '@/providers/theme-provider';
 
 type Props = {
   children: ReactNode;
@@ -11,11 +12,14 @@ type Props = {
 };
 
 /**
- * Contenedor común: fondo de la app, márgenes laterales, respeto del notch y
- * espacio inferior suficiente para que la barra flotante no tape el contenido.
+ * Contenedor común: fondo de la app (según el tema activo), márgenes
+ * laterales, respeto del notch y espacio inferior suficiente para que la
+ * barra flotante no tape el contenido.
  */
 export function Screen({ children, scroll = true }: Props) {
   const insets = useSafeAreaInsets();
+  const { colors } = useAppTheme();
+  const rootStyle = { backgroundColor: colors.background };
   const contentPadding = {
     paddingTop: insets.top + Spacing.four,
     paddingBottom: insets.bottom + TabBarHeight + Spacing.seven,
@@ -23,7 +27,7 @@ export function Screen({ children, scroll = true }: Props) {
 
   if (!scroll) {
     return (
-      <View style={styles.root}>
+      <View style={[styles.root, rootStyle]}>
         <View style={[styles.content, contentPadding]}>{children}</View>
       </View>
     );
@@ -31,7 +35,7 @@ export function Screen({ children, scroll = true }: Props) {
 
   return (
     <ScrollView
-      style={styles.root}
+      style={[styles.root, rootStyle]}
       contentContainerStyle={[styles.content, contentPadding]}
       showsVerticalScrollIndicator={false}>
       {children}
@@ -42,7 +46,6 @@ export function Screen({ children, scroll = true }: Props) {
 const styles = StyleSheet.create({
   root: {
     flex: 1,
-    backgroundColor: Colors.background,
   },
   content: {
     flexGrow: 1,

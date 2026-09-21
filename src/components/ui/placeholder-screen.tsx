@@ -2,7 +2,8 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { IconCircle } from '@/components/ui/icon-circle';
 import { Screen } from '@/components/ui/screen';
-import { Colors, FontSize, Spacing } from '@/constants/theme';
+import { FontSize, Spacing } from '@/constants/theme';
+import { useAppTheme } from '@/providers/theme-provider';
 import type { IconName } from '@/types/finance';
 
 type Props = {
@@ -16,17 +17,14 @@ type Props = {
  * la navegación inferior funcione completa desde la primera etapa.
  */
 export function PlaceholderScreen({ icon, title, description }: Props) {
+  const { colors } = useAppTheme();
+
   return (
     <Screen scroll={false}>
       <View style={styles.center}>
-        <IconCircle
-          name={icon}
-          size={72}
-          color={Colors.green}
-          backgroundColor={Colors.greenSofter}
-        />
-        <Text style={styles.title}>{title}</Text>
-        <Text style={styles.description}>{description}</Text>
+        <IconCircle name={icon} size={72} color={colors.green} backgroundColor={colors.greenSofter} />
+        <Text style={[styles.title, { color: colors.text }]}>{title}</Text>
+        <Text style={[styles.description, { color: colors.textSecondary }]}>{description}</Text>
       </View>
     </Screen>
   );
@@ -42,12 +40,10 @@ const styles = StyleSheet.create({
   title: {
     fontSize: FontSize.section,
     fontWeight: '800',
-    color: Colors.text,
     textAlign: 'center',
   },
   description: {
     fontSize: FontSize.body,
-    color: Colors.textSecondary,
     textAlign: 'center',
     maxWidth: 280,
   },

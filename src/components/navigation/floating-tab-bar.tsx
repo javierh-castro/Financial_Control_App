@@ -3,53 +3,62 @@ import type { BottomTabBarProps } from 'expo-router/js-tabs';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { TABS } from '@/components/navigation/tabs-config';
-import { CardShadow, Colors, FontSize, Radius, Spacing, TabBarHeight } from '@/constants/theme';
+import { CardShadow, FontSize, MaxContentWidth, Radius, Spacing, TabBarHeight } from '@/constants/theme';
+import { useAppTheme } from '@/providers/theme-provider';
 
 /** Barra inferior flotante con forma de píldora, como en el diseño. */
 export function FloatingTabBar({ state, navigation, insets }: BottomTabBarProps) {
+  const { colors } = useAppTheme();
+
   return (
     <View
-      style={[styles.wrapper, { paddingBottom: Math.max(insets.bottom, Spacing.four) }]}
+      style={[styles.wrapper, { paddingBottom: Math.max(insets.bottom * 0.4, Spacing.two) }]}
       pointerEvents="box-none">
-      <View style={styles.bar}>
-        {state.routes.map((route, index) => {
-          const tab = TABS.find((item) => item.name === route.name);
-          if (!tab) return null;
+      <View style={styles.barContainer}>
+        <View style={[styles.bar, { backgroundColor: colors.surface }]}>
+          {state.routes.map((route, index) => {
+            const tab = TABS.find((item) => item.name === route.name);
+            if (!tab) return null;
 
-          const focused = state.index === index;
+            const focused = state.index === index;
 
-          const onPress = () => {
-            const event = navigation.emit({
-              type: 'tabPress',
-              target: route.key,
-              canPreventDefault: true,
-            });
-            if (!focused && !event.defaultPrevented) {
-              navigation.navigate(route.name, route.params);
-            }
-          };
+            const onPress = () => {
+              const event = navigation.emit({
+                type: 'tabPress',
+                target: route.key,
+                canPreventDefault: true,
+              });
+              if (!focused && !event.defaultPrevented) {
+                navigation.navigate(route.name, route.params);
+              }
+            };
 
-          return (
-            <Pressable
-              key={route.key}
-              accessibilityRole="button"
-              accessibilityState={focused ? { selected: true } : {}}
-              accessibilityLabel={tab.label}
-              onPress={onPress}
-              style={({ pressed }) => [styles.item, pressed && styles.pressed]}>
-              <Ionicons
-                name={focused ? tab.iconActive : tab.icon}
-                size={24}
-                color={focused ? Colors.green : Colors.textSecondary}
-              />
-              <Text
-                numberOfLines={1}
-                style={[styles.label, focused ? styles.labelActive : undefined]}>
-                {tab.label}
-              </Text>
-            </Pressable>
-          );
-        })}
+            return (
+              <Pressable
+                key={route.key}
+                accessibilityRole="button"
+                accessibilityState={focused ? { selected: true } : {}}
+                accessibilityLabel={tab.label}
+                onPress={onPress}
+                style={({ pressed }) => [styles.item, pressed && styles.pressed]}>
+                <Ionicons
+                  name={focused ? tab.iconActive : tab.icon}
+                  size={28}
+                  color={focused ? colors.green : colors.textSecondary}
+                />
+                <Text
+                  numberOfLines={1}
+                  style={[
+                    styles.label,
+                    { color: focused ? colors.green : colors.textSecondary },
+                    focused && styles.labelActive,
+                  ]}>
+                  {tab.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
       </View>
     </View>
   );
@@ -61,16 +70,20 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    paddingHorizontal: Spacing.four,
+    paddingHorizontal: Spacing.three,
     backgroundColor: 'transparent',
+  },
+  barContainer: {
+    width: '100%',
+    maxWidth: MaxContentWidth,
+    alignSelf: 'center',
   },
   bar: {
     flexDirection: 'row',
     alignItems: 'center',
     height: TabBarHeight,
-    paddingHorizontal: Spacing.two,
+    paddingHorizontal: Spacing.three,
     borderRadius: Radius.lg,
-    backgroundColor: Colors.surface,
     ...CardShadow,
     shadowOpacity: 0.1,
     shadowRadius: 20,
@@ -79,15 +92,14 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 2,
-    paddingVertical: Spacing.two,
+    gap: 6,
+    paddingVertical: Spacing.three,
   },
   label: {
-    fontSize: FontSize.caption,
-    color: Colors.textSecondary,
+    fontSize: FontSize.small,
+    fontWeight: '600',
   },
   labelActive: {
-    color: Colors.green,
     fontWeight: '700',
   },
   pressed: {

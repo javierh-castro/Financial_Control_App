@@ -1,7 +1,8 @@
 import { Link, type Href } from 'expo-router';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { Colors, FontSize } from '@/constants/theme';
+import { FontSize } from '@/constants/theme';
+import { useAppTheme } from '@/providers/theme-provider';
 
 type Props = {
   prompt: string;
@@ -11,10 +12,12 @@ type Props = {
 
 /** "¿Ya tenés una cuenta? Iniciar sesión" y variantes. */
 export function AuthFooterLink({ prompt, actionLabel, href }: Props) {
+  const { colors } = useAppTheme();
+
   return (
     <View style={styles.row}>
-      <Text style={styles.prompt}>{prompt} </Text>
-      <Link href={href} style={styles.link}>
+      <Text style={[styles.prompt, { color: colors.textSecondary }]}>{prompt} </Text>
+      <Link href={href} style={[styles.link, { color: colors.green }]}>
         {actionLabel}
       </Link>
     </View>
@@ -29,11 +32,9 @@ const styles = StyleSheet.create({
   },
   prompt: {
     fontSize: FontSize.small,
-    color: Colors.textSecondary,
   },
   link: {
     fontSize: FontSize.small,
-    color: Colors.green,
     fontWeight: '700',
   },
 });

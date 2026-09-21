@@ -1,12 +1,11 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
-import MaterialCommunityIcons from '@expo/vector-icons/MaterialCommunityIcons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { BalanceGradient, CardShadow, Colors, FontSize, Radius, Spacing } from '@/constants/theme';
+import { BalanceGradient, CardShadow, Colors, Radius, Spacing } from '@/constants/theme';
 import type { IconName } from '@/types/finance';
-import { formatAmount } from '@/utils/format';
+import { formatAmount, maskAmount } from '@/utils/format';
 
 type Props = {
   available: number;
@@ -24,30 +23,24 @@ export function BalanceCard({ available, income, expenses }: Props) {
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={styles.card}>
-      <View style={styles.topRow}>
-        <View style={styles.balanceBlock}>
-          <Text style={styles.label}>Disponible</Text>
-          <View style={styles.amountRow}>
-            <Text style={styles.amount} numberOfLines={1} adjustsFontSizeToFit>
-              {hidden ? '$ ••••••' : formatAmount(available)}
-            </Text>
-            <Pressable
-              accessibilityRole="button"
-              accessibilityLabel={hidden ? 'Mostrar saldo' : 'Ocultar saldo'}
-              onPress={() => setHidden((value) => !value)}
-              hitSlop={Spacing.three}
-              style={({ pressed }) => pressed && styles.pressed}>
-              <Ionicons
-                name={hidden ? 'eye-off-outline' : 'eye-outline'}
-                size={20}
-                color={Colors.textOnGreen}
-              />
-            </Pressable>
-          </View>
-        </View>
-
-        <View style={styles.badge}>
-          <MaterialCommunityIcons name="cash-multiple" size={30} color={Colors.textOnGreen} />
+      <View style={styles.balanceBlock}>
+        <Text style={styles.label}>Disponible</Text>
+        <View style={styles.amountRow}>
+          <Text style={styles.amount} numberOfLines={1} adjustsFontSizeToFit>
+            {hidden ? maskAmount(available) : formatAmount(available)}
+          </Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={hidden ? 'Mostrar saldo' : 'Ocultar saldo'}
+            onPress={() => setHidden((value) => !value)}
+            hitSlop={Spacing.three}
+            style={({ pressed }) => pressed && styles.pressed}>
+            <Ionicons
+              name={hidden ? 'eye-off-outline' : 'eye-outline'}
+              size={20}
+              color={Colors.textOnGreen}
+            />
+          </Pressable>
         </View>
       </View>
 
@@ -76,12 +69,12 @@ function Stat({
   return (
     <View style={styles.stat}>
       <View style={styles.statIcon}>
-        <Ionicons name={icon} size={18} color={Colors.green} />
+        <Ionicons name={icon} size={18} color={Colors.textOnGreen} />
       </View>
       <View style={styles.statTexts}>
         <Text style={styles.statLabel}>{label}</Text>
         <Text style={styles.statValue} numberOfLines={1} adjustsFontSizeToFit>
-          {hidden ? '$ ••••' : formatAmount(value)}
+          {hidden ? maskAmount(value) : formatAmount(value)}
         </Text>
       </View>
     </View>
@@ -97,18 +90,13 @@ const styles = StyleSheet.create({
     shadowColor: Colors.green,
     shadowOpacity: 0.28,
   },
-  topRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    gap: Spacing.four,
-  },
   balanceBlock: {
-    flex: 1,
     gap: Spacing.one,
   },
   label: {
-    fontSize: FontSize.body,
+    // Tamaño fijo (no el token `body`): esta tarjeta queda igual aunque
+    // la escala general de fuentes se achique.
+    fontSize: 16,
     color: Colors.textOnGreen,
     opacity: 0.9,
   },
@@ -119,18 +107,12 @@ const styles = StyleSheet.create({
   },
   amount: {
     flexShrink: 1,
-    fontSize: FontSize.display,
+    // Tamaño fijo (ya no el token `display`, que ahora usa el saludo con
+    // otro valor): este monto queda como estaba.
+    fontSize: 31,
     fontWeight: '800',
     color: Colors.textOnGreen,
     letterSpacing: -1,
-  },
-  badge: {
-    width: 56,
-    height: 56,
-    borderRadius: Radius.pill,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.2)',
   },
   divider: {
     height: StyleSheet.hairlineWidth,
@@ -150,26 +132,26 @@ const styles = StyleSheet.create({
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: Spacing.three,
+    gap: Spacing.two,
   },
   statIcon: {
-    width: 36,
-    height: 36,
-    borderRadius: Radius.pill,
+    width: 18,
+    height: 18,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: Colors.surface,
   },
   statTexts: {
     flex: 1,
   },
   statLabel: {
-    fontSize: FontSize.caption,
+    // Tamaños fijos (no los tokens `caption`/`subtitle`): esta tarjeta
+    // queda igual aunque la escala general de fuentes se achique.
+    fontSize: 12,
     color: Colors.textOnGreen,
     opacity: 0.9,
   },
   statValue: {
-    fontSize: FontSize.subtitle,
+    fontSize: 18,
     fontWeight: '700',
     color: Colors.textOnGreen,
   },

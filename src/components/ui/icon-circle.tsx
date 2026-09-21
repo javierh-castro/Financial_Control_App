@@ -1,6 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { StyleSheet, View, type StyleProp, type ViewStyle } from 'react-native';
 
+import { MoneyBillWaveIcon } from '@/components/ui/money-bill-wave-icon';
 import { Radius } from '@/constants/theme';
 import type { IconName } from '@/types/finance';
 
@@ -22,7 +23,11 @@ export function IconCircle({ name, size = 44, color, backgroundColor, style }: P
         { width: size, height: size, borderRadius: Radius.pill, backgroundColor },
         style,
       ]}>
-      <Ionicons name={name} size={Math.round(size * 0.48)} color={color} />
+      {name === 'briefcase-outline' ? (
+        <MoneyBillWaveIcon size={Math.round(size * 0.48)} color={color} />
+      ) : (
+        <Ionicons name={name} size={Math.round(size * 0.48)} color={color} />
+      )}
     </View>
   );
 }

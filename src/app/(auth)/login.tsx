@@ -8,10 +8,12 @@ import { AuthScreen } from '@/components/auth/auth-screen';
 import { FormMessage } from '@/components/auth/form-message';
 import { PrimaryButton } from '@/components/ui/primary-button';
 import { TextField } from '@/components/ui/text-field';
-import { Colors, FontSize, Spacing } from '@/constants/theme';
+import { FontSize, Spacing } from '@/constants/theme';
 import { supabase } from '@/lib/supabase';
+import { useAppTheme } from '@/providers/theme-provider';
 
 export default function LoginScreen() {
+  const { colors } = useAppTheme();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -62,7 +64,7 @@ export default function LoginScreen() {
         />
       </View>
 
-      <Link href="/forgot-password" style={styles.forgot}>
+      <Link href="/forgot-password" style={[styles.forgot, { color: colors.green }]}>
         ¿Olvidaste tu contraseña?
       </Link>
 
@@ -80,7 +82,6 @@ const styles = StyleSheet.create({
   forgot: {
     alignSelf: 'flex-end',
     fontSize: FontSize.small,
-    color: Colors.green,
     fontWeight: '600',
   },
 });

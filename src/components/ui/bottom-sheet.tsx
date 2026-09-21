@@ -2,7 +2,8 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { Animated, Easing, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { Colors, Radius, Spacing } from '@/constants/theme';
+import { Radius, Spacing } from '@/constants/theme';
+import { useAppTheme } from '@/providers/theme-provider';
 
 type Props = {
   isPresented: boolean;
@@ -25,6 +26,7 @@ const HIDDEN_OFFSET = 700;
  */
 export function BottomSheet({ isPresented, onDismiss, children }: Props) {
   const insets = useSafeAreaInsets();
+  const { colors } = useAppTheme();
   const [translateY] = useState(() => new Animated.Value(isPresented ? 0 : 1));
   const [mounted, setMounted] = useState(isPresented);
   // Patrón de "ajustar estado en base a un cambio de prop" (sin efecto):
@@ -66,7 +68,7 @@ export function BottomSheet({ isPresented, onDismiss, children }: Props) {
         <Animated.View
           style={[
             styles.sheet,
-            { paddingBottom: insets.bottom + Spacing.four },
+            { backgroundColor: colors.surface, paddingBottom: insets.bottom + Spacing.four },
             {
               transform: [
                 {
@@ -78,7 +80,7 @@ export function BottomSheet({ isPresented, onDismiss, children }: Props) {
               ],
             },
           ]}>
-          <View style={styles.handle} />
+          <View style={[styles.handle, { backgroundColor: colors.background }]} />
           {children}
         </Animated.View>
       </View>
@@ -95,7 +97,6 @@ const styles = StyleSheet.create({
   sheet: {
     maxHeight: '88%',
     overflow: 'hidden',
-    backgroundColor: Colors.surface,
     borderTopLeftRadius: Radius.lg,
     borderTopRightRadius: Radius.lg,
     paddingHorizontal: Spacing.four,
@@ -106,7 +107,6 @@ const styles = StyleSheet.create({
     width: 40,
     height: 4,
     borderRadius: Radius.pill,
-    backgroundColor: Colors.background,
     marginBottom: Spacing.four,
   },
 });

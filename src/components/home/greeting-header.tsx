@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
+import { FontSize, Radius, Spacing } from '@/constants/theme';
+import { useAppTheme } from '@/providers/theme-provider';
 import { formatMonth } from '@/utils/format';
 
 type Props = {
@@ -13,18 +14,22 @@ type Props = {
 
 /** Saludo, mes en curso y chip de estado. */
 export function GreetingHeader({ name, month, synced = true }: Props) {
+  const { colors } = useAppTheme();
+
   return (
     <View style={styles.row}>
       <View style={styles.texts}>
-        <Text style={styles.greeting} numberOfLines={1}>
-          {name ? `Hola, ${name}` : 'Hola'} <Text style={styles.wave}>👋</Text>
+        <Text style={[styles.greeting, { color: colors.text }]} numberOfLines={1}>
+          {name ? `Hola, ${name}!` : 'Hola!'}
         </Text>
-        <Text style={styles.month}>{formatMonth(month)}</Text>
+        <Text style={[styles.month, { color: colors.textSecondary }]}>{formatMonth(month)}</Text>
       </View>
 
-      <View style={styles.chip}>
-        <View style={[styles.dot, !synced && styles.dotOffline]} />
-        <Text style={styles.chipLabel}>{synced ? 'Sincronizado' : 'Sin conexión'}</Text>
+      <View style={[styles.chip, { backgroundColor: colors.greenSoft }]}>
+        <View style={[styles.dot, { backgroundColor: synced ? colors.green : colors.textSecondary }]} />
+        <Text style={[styles.chipLabel, { color: colors.text }]}>
+          {synced ? 'Sincronizado' : 'Sin conexión'}
+        </Text>
       </View>
     </View>
   );
@@ -42,17 +47,16 @@ const styles = StyleSheet.create({
     gap: Spacing.one,
   },
   greeting: {
-    fontSize: FontSize.display,
+    // Tamaño fijo, más chico que el token `display` (que comparte con el
+    // monto grande de la tarjeta de saldo): el saludo baja 3 puntos más.
+    fontSize: 28,
     fontWeight: '800',
-    color: Colors.text,
     letterSpacing: -1,
   },
-  wave: {
-    fontSize: FontSize.section,
-  },
   month: {
-    fontSize: FontSize.body,
-    color: Colors.textSecondary,
+    // Tamaño fijo (no el token `body`): esta pantalla queda igual aunque
+    // la escala general de fuentes se achique.
+    fontSize: 16,
   },
   chip: {
     flexDirection: 'row',
@@ -61,21 +65,15 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
     borderRadius: Radius.pill,
-    backgroundColor: Colors.greenSoft,
     marginTop: Spacing.two,
   },
   dot: {
     width: 8,
     height: 8,
     borderRadius: Radius.pill,
-    backgroundColor: Colors.green,
-  },
-  dotOffline: {
-    backgroundColor: Colors.textSecondary,
   },
   chipLabel: {
     fontSize: FontSize.small,
     fontWeight: '600',
-    color: Colors.text,
   },
 });
