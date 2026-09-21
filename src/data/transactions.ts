@@ -45,6 +45,31 @@ export async function getRecentTransactions(
   );
 }
 
+/** Todos los movimientos de un mes (ISO, día 1) para el usuario dado, del más reciente al más viejo. */
+export async function getTransactionsForMonth(
+  db: SQLiteDatabase,
+  userId: string,
+  month: string
+): Promise<Transaction[]> {
+  const monthPrefix = month.slice(0, 7);
+  return db.getAllAsync<Transaction>(
+    `SELECT
+       t.id AS id,
+       t.title AS title,
+       COALESCE(c.name, 'Sin categoría') AS category,
+       t.amount_cents / 100.0 AS amount,
+       t.kind AS kind,
+       t.date AS date,
+       COALESCE(c.icon, 'help-circle-outline') AS icon
+     FROM transactions t
+     LEFT JOIN categories c ON c.id = t.category_id AND c.deleted_at IS NULL
+     WHERE t.user_id = ? AND t.deleted_at IS NULL AND t.date LIKE ? || '%'
+     ORDER BY t.date DESC, t.rowid DESC`,
+    userId,
+    monthPrefix
+  );
+}
+
 /** Ingresos y gastos totales de un mes (ISO 'YYYY-MM-DD', día 1) para el usuario dado. */
 export async function getMonthlySummary(
   db: SQLiteDatabase,
