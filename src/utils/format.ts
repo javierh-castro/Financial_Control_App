@@ -28,6 +28,11 @@ const MONTHS_SHORT = [
   'dic.',
 ];
 
+/** Abreviatura de 3 letras sin punto, para etiquetas cortas del eje ("Oct", "Dic", "Ene"). */
+const MONTHS_ABBR = MONTHS.map((name) => name.slice(0, 3));
+
+const WEEKDAYS_SHORT = ['Dom', 'Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb'];
+
 /** Convierte "2026-09-15" en una fecha local, sin corrimientos por zona horaria. */
 function parseIsoDate(iso: string): Date {
   const [year, month, day] = iso.split('-').map(Number);
@@ -40,6 +45,11 @@ export function formatAmount(value: number): string {
     .toString()
     .replace(/\B(?=(\d{3})+(?!\d))/g, '.');
   return `$ ${digits}`;
+}
+
+/** `104600` → `"$ •••.•••"`. Mismo largo que `formatAmount`, para que ocultar el saldo no mueva el layout. */
+export function maskAmount(value: number): string {
+  return formatAmount(value).replace(/\d/g, '•');
 }
 
 /** `12800` + gasto → `"- $ 12.800"`. */
@@ -57,4 +67,28 @@ export function formatMonth(iso: string): string {
 export function formatShortDate(iso: string): string {
   const date = parseIsoDate(iso);
   return `${date.getDate()} ${MONTHS_SHORT[date.getMonth()]}`;
+}
+
+/** `"2026-09-15"` → `"15 sept. 2026"`. Para rangos que pueden cruzar años. */
+export function formatDateWithYear(iso: string): string {
+  const date = parseIsoDate(iso);
+  return `${date.getDate()} ${MONTHS_SHORT[date.getMonth()]} ${date.getFullYear()}`;
+}
+
+/** `"2026-09-15"` → `"Mar"` (día de la semana, abreviado a 3 letras). */
+export function formatWeekdayShort(iso: string): string {
+  const date = parseIsoDate(iso);
+  return WEEKDAYS_SHORT[date.getDay()];
+}
+
+/** `"2026-10-01"` → `"Oct"` (mes, abreviado a 3 letras, sin punto). */
+export function formatMonthAbbr(iso: string): string {
+  const date = parseIsoDate(iso);
+  return MONTHS_ABBR[date.getMonth()];
+}
+
+/** `"Javier Castro"` → `"Javier"`. `undefined` si no hay nombre cargado. */
+export function firstName(fullName?: string | null): string | undefined {
+  const trimmed = fullName?.trim();
+  return trimmed ? trimmed.split(/\s+/)[0] : undefined;
 }
