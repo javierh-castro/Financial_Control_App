@@ -3,7 +3,7 @@ import type { SQLiteDatabase } from 'expo-sqlite';
 /** Nombre del archivo de base de datos en el dispositivo. */
 export const DATABASE_NAME = 'gastos.db';
 
-const DATABASE_VERSION = 3;
+const DATABASE_VERSION = 5;
 
 /**
  * Crea/actualiza el esquema local vía `PRAGMA user_version`, siguiendo el
@@ -27,6 +27,17 @@ const DATABASE_VERSION = 3;
  * Solo hace falta el `ALTER TABLE` para instalaciones que ya tenían la
  * tabla en v2; una instalación v0/v1 llega directo al `CREATE TABLE` de
  * abajo, que ya incluye la columna.
+ *
+ * v3 → v4 (Entrega 4, Ajustes): agrega `user_preferences` (espejo de
+ * `supabase/migrations/0003_add_user_preferences.sql`), una fila por
+ * usuario con sus preferencias sincronizables (hoy solo notificaciones).
+ * Al ser tabla nueva no hace falta rama de migración propia: el `CREATE
+ * TABLE IF NOT EXISTS` de abajo alcanza para v0, v1, v2 y v3 por igual.
+ *
+ * v4 → v5: sin cambios de esquema. Solo fuerza a re-correr la migración
+ * en instalaciones que ya habían quedado en `user_version = 4` antes de
+ * que `user_preferences` se agregara al bloque `CREATE TABLE IF NOT
+ * EXISTS`, dejándolas sin esa tabla pese a reportar v4.
  */
 export async function migrateDbIfNeeded(db: SQLiteDatabase): Promise<void> {
   // No se puede cambiar journal_mode dentro de una transacción explícita.
@@ -93,6 +104,17 @@ export async function migrateDbIfNeeded(db: SQLiteDatabase): Promise<void> {
         last_synced_at TEXT,
         last_cursor TEXT
       );
+
+      CREATE TABLE IF NOT EXISTS user_preferences (
+        user_id TEXT PRIMARY KEY NOT NULL,
+        notifications_enabled INTEGER NOT NULL DEFAULT 1,
+        version INTEGER NOT NULL DEFAULT 1,
+        created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+        updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now')),
+        sync_status TEXT NOT NULL DEFAULT 'pending' CHECK (sync_status IN ('pending', 'synced', 'failed')),
+        last_sync_error TEXT
+      );
+      CREATE INDEX IF NOT EXISTS idx_user_preferences_sync_status ON user_preferences (sync_status);
     `);
 
     await txn.execAsync(`PRAGMA user_version = ${DATABASE_VERSION}`);

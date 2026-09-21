@@ -11,7 +11,9 @@ import { supabase } from '@/lib/supabase';
  * conflictos por versión; se empuja lo pendiente y después se trae todo
  * de nuevo, y lo que devuelve Supabase pisa lo local. `legacy_transactions_v1`
  * (movimientos de ejemplo de la Entrega 1) nunca se toca acá: esta
- * sincronización solo conoce `categories` y `transactions`.
+ * sincronización conoce `categories`, `transactions` y `user_preferences`
+ * (Entrega 4). `user_preferences` es de una sola fila por usuario, sin
+ * `deleted_at`: push/pull son upsert simple, sin borrado lógico.
  */
 
 type LocalCategoryRow = {
@@ -58,6 +60,18 @@ type RemoteTransactionRow = {
   created_at: string;
   updated_at: string;
   deleted_at: string | null;
+};
+
+type LocalPreferencesRow = {
+  notifications_enabled: number;
+};
+
+type RemotePreferencesRow = {
+  user_id: string;
+  notifications_enabled: boolean;
+  version: number;
+  created_at: string;
+  updated_at: string;
 };
 
 // Sincronizaciones en curso por usuario: evita que dos disparadores
@@ -178,6 +192,44 @@ async function pushTransactions(db: SQLiteDatabase, userId: string): Promise<boo
 }
 
 /**
+ * Empuja `user_preferences` si tiene cambios pendientes. Es una sola fila
+ * por usuario (PK = user_id, no id propio), así que el upsert usa
+ * `onConflict: 'user_id'` en vez del patrón por lista de `pushCategories`.
+ */
+async function pushPreferences(db: SQLiteDatabase, userId: string): Promise<boolean> {
+  const pending = await db.getFirstAsync<LocalPreferencesRow>(
+    `SELECT notifications_enabled
+     FROM user_preferences
+     WHERE user_id = ? AND sync_status IN ('pending', 'failed')`,
+    userId
+  );
+  if (!pending) return true;
+
+  const { error } = await supabase.from('user_preferences').upsert(
+    {
+      user_id: userId,
+      notifications_enabled: pending.notifications_enabled === 1,
+    },
+    { onConflict: 'user_id' }
+  );
+
+  if (error) {
+    await db.runAsync(
+      `UPDATE user_preferences SET sync_status = 'failed', last_sync_error = ? WHERE user_id = ?`,
+      describeSyncError(error),
+      userId
+    );
+    return false;
+  }
+
+  await db.runAsync(
+    `UPDATE user_preferences SET sync_status = 'synced', last_sync_error = NULL WHERE user_id = ?`,
+    userId
+  );
+  return true;
+}
+
+/**
  * Trae todas las categories/transactions del usuario y las escribe en
  * SQLite dentro de una sola transacción (todo o nada). Nunca borra filas
  * locales: los `deleted_at` remotos se aplican como update (borrado
@@ -185,16 +237,19 @@ async function pushTransactions(db: SQLiteDatabase, userId: string): Promise<boo
  * no aparece en la respuesta, así que este paso no la toca.
  */
 async function pullAndApply(db: SQLiteDatabase, userId: string): Promise<void> {
-  const [categoriesResult, transactionsResult] = await Promise.all([
+  const [categoriesResult, transactionsResult, preferencesResult] = await Promise.all([
     supabase.from('categories').select('*').eq('user_id', userId),
     supabase.from('transactions').select('*').eq('user_id', userId),
+    supabase.from('user_preferences').select('*').eq('user_id', userId),
   ]);
 
   if (categoriesResult.error) throw categoriesResult.error;
   if (transactionsResult.error) throw transactionsResult.error;
+  if (preferencesResult.error) throw preferencesResult.error;
 
   const categories = (categoriesResult.data ?? []) as RemoteCategoryRow[];
   const transactions = (transactionsResult.data ?? []) as RemoteTransactionRow[];
+  const preferences = (preferencesResult.data ?? []) as RemotePreferencesRow[];
 
   await db.withExclusiveTransactionAsync(async (txn) => {
     for (const category of categories) {
@@ -258,6 +313,26 @@ async function pullAndApply(db: SQLiteDatabase, userId: string): Promise<void> {
         transaction.deleted_at
       );
     }
+
+    for (const preference of preferences) {
+      await txn.runAsync(
+        `INSERT INTO user_preferences
+           (user_id, notifications_enabled, version, created_at, updated_at, sync_status, last_sync_error)
+         VALUES (?, ?, ?, ?, ?, 'synced', NULL)
+         ON CONFLICT(user_id) DO UPDATE SET
+           notifications_enabled = excluded.notifications_enabled,
+           version = excluded.version,
+           created_at = excluded.created_at,
+           updated_at = excluded.updated_at,
+           sync_status = 'synced',
+           last_sync_error = NULL`,
+        preference.user_id,
+        preference.notifications_enabled ? 1 : 0,
+        preference.version,
+        preference.created_at,
+        preference.updated_at
+      );
+    }
   });
 }
 
@@ -271,7 +346,8 @@ async function runSync(db: SQLiteDatabase, userId: string): Promise<void> {
   try {
     const categoriesOk = await pushCategories(db, userId);
     const transactionsOk = await pushTransactions(db, userId);
-    hadErrors = !categoriesOk || !transactionsOk;
+    const preferencesOk = await pushPreferences(db, userId);
+    hadErrors = !categoriesOk || !transactionsOk || !preferencesOk;
 
     await pullAndApply(db, userId);
   } catch {
